@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTP Web Client</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">FTP Web Client</h1>
+
+        <!-- Connection Form -->
+        <div id="connection-form" class="bg-white p-4 rounded-lg shadow-md mb-4">
+            <h2 class="text-xl font-semibold mb-2">Conexão</h2>
+            <div class="flex space-x-2">
+                <input type="text" id="server" placeholder="Servidor FTP" class="flex-1 p-2 border rounded">
+                <input type="text" id="user" placeholder="Usuário" class="p-2 border rounded">
+                <input type="password" id="password" placeholder="Senha" class="p-2 border rounded">
+                <button id="connect-btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Conectar</button>
+            </div>
+        </div>
+
+        <!-- File List -->
+        <div id="file-list-container" class="hidden bg-white p-4 rounded-lg shadow-md mb-4">
+            <h2 class="text-xl font-semibold mb-2">Arquivos Remotos</h2>
+
+            <!-- Filter -->
+            <div class="flex items-center space-x-2 mb-2">
+                <label for="start-date">De:</label>
+                <input type="date" id="start-date" class="p-2 border rounded">
+                <label for="end-date">Até:</label>
+                <input type="date" id="end-date" class="p-2 border rounded">
+                <button id="filter-btn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Filtrar</button>
+            </div>
+
+            <div id="path-breadcrumbs" class="mb-2 text-gray-500">/</div>
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b">
+                        <th class="text-left p-2">Nome</th>
+                        <th class="text-left p-2">Tamanho</th>
+                        <th class="text-left p-2">Data de Modificação</th>
+                        <th class="text-left p-2">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="file-list"></tbody>
+            </table>
+        </div>
+
+        <!-- Downloads -->
+        <div id="downloads-container" class="bg-white p-4 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-2">Downloads</h2>
+            <div id="downloads-list"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
