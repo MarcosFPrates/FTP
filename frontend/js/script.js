@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const portInput = document.getElementById('port');
     const userInput = document.getElementById('user');
     const passwordInput = document.getElementById('password');
-    const fileListContainer = document.getElementById('file-list-container');
+    const mainContent = document.getElementById('main-content');
     const fileListBody = document.getElementById('file-list');
     const pathBreadcrumbs = document.getElementById('path-breadcrumbs');
     const downloadsList = document.getElementById('downloads-list');
@@ -17,45 +17,44 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPath = '/';
     const socket = io('http://localhost:5001');
 
-    socket.on('connect', () => console.log('Socket.IO connected'));
-    socket.on('disconnect', () => console.log('Socket.IO disconnected'));
-
     socket.on('download_progress', (data) => {
         const progressBar = document.getElementById(`progress-${data.remote_path}`);
-        if (progressBar) {
-            progressBar.value = data.progress;
-        }
+        if (progressBar) progressBar.value = data.progress;
     });
 
     socket.on('download_complete', (data) => {
         const downloadItem = document.getElementById(`download-${data.remote_path}`);
         if (downloadItem) {
-            downloadItem.innerHTML += ` - <a href="http://localhost:5001/downloads/${data.filename}" target="_blank" class="text-blue-500">Salvar</a>`;
+            const link = document.createElement('a');
+            link.href = `http://localhost:5001/downloads/${data.filename}`;
+            link.target = '_blank';
+            link.className = 'text-indigo-400 hover:underline ml-4';
+            link.textContent = 'Salvar';
+            downloadItem.querySelector('.status').innerHTML = 'Completo';
+            downloadItem.querySelector('.actions').innerHTML = '';
+            downloadItem.querySelector('.actions').appendChild(link);
         }
     });
 
     socket.on('download_error', (data) => {
-        alert(`Download error: ${data.error}`);
+        showError(`Download error: ${data.error}`);
     });
 
     connectBtn.addEventListener('click', () => {
-        if (isConnected) {
-            disconnect();
-        } else {
-            connect();
-        }
+        if (isConnected) disconnect();
+        else connect();
     });
 
-    filterBtn.addEventListener('click', () => {
-        fetchFileList(currentPath);
-    });
+    filterBtn.addEventListener('click', () => fetchFileList(currentPath));
 
     async function connect() {
         const server = serverInput.value;
-        const port = portInput.value || '8080';
+        const protocol = document.querySelector('input[name="protocol"]:checked').value;
+        const port = portInput.value || (protocol === 'ftp' ? '21' : '445');
         const user = userInput.value;
         const password = passwordInput.value;
-        const protocol = document.querySelector('input[name="protocol"]:checked').value;
+
+        setLoading(connectBtn, true, 'Conectando...');
 
         try {
             const response = await fetch('http://localhost:5001/api/connect', {
@@ -69,29 +68,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errorData.error || 'Connection failed');
             }
 
-            const data = await response.json();
             isConnected = true;
             updateConnectionUI();
             currentPath = '/';
             fetchFileList(currentPath);
-
         } catch (error) {
-            alert(`Error: ${error.message}`);
+            showError(error.message);
+        } finally {
+            setLoading(connectBtn, false, '<i class="fas fa-plug mr-2"></i>Conectar');
         }
     }
 
     async function disconnect() {
+        setLoading(connectBtn, true, 'Desconectando...');
         try {
             await fetch('http://localhost:5001/api/disconnect', { method: 'POST' });
             isConnected = false;
             updateConnectionUI();
             fileListBody.innerHTML = '';
         } catch (error) {
-            alert(`Error disconnecting: ${error.message}`);
+            showError(error.message);
+        } finally {
+            setLoading(connectBtn, false, '<i class="fas fa-plug mr-2"></i>Conectar');
         }
     }
 
     async function fetchFileList(path) {
+        fileListBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-gray-400">Carregando...</td></tr>';
         const startDate = startDateInput.value;
         const endDate = endDateInput.value;
         let url = `http://localhost:5001/api/list?path=${encodeURIComponent(path)}`;
@@ -108,7 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const files = await response.json();
             renderFileList(files, path);
         } catch (error) {
-            alert(`Error: ${error.message}`);
+            showError(error.message);
+            fileListBody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-400">Falha ao carregar arquivos.</td></tr>';
         }
     }
 
@@ -118,11 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (path !== '/') {
             const parentRow = document.createElement('tr');
-            parentRow.innerHTML = `<td colspan="4" class="p-2 cursor-pointer hover:bg-gray-200 file-item directory">..</td>`;
+            parentRow.className = 'cursor-pointer hover:bg-gray-700';
+            parentRow.innerHTML = `<td colspan="4" class="p-2 file-item directory">..</td>`;
             parentRow.addEventListener('click', () => {
-                const parentPath = path.substring(0, path.lastIndexOf('/', path.length - 2)) + '/';
-                currentPath = parentPath;
-                fetchFileList(parentPath);
+                const parentPath = path.split('/').slice(0, -2).join('/') + '/';
+                currentPath = parentPath || '/';
+                fetchFileList(currentPath);
             });
             fileListBody.appendChild(parentRow);
         }
@@ -135,14 +140,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         files.forEach(([name, facts]) => {
             const row = document.createElement('tr');
+            row.className = 'border-b border-gray-700 hover:bg-gray-700';
             const isDirectory = facts.type === 'dir';
             const remoteFilePath = `${path}${name}`;
 
             row.innerHTML = `
-                <td class="p-2 ${isDirectory ? 'cursor-pointer hover:bg-gray-200 file-item directory' : 'file-item file'}">${name}</td>
-                <td class="p-2">${facts.size || ''}</td>
-                <td class="p-2">${facts.modify ? formatDate(facts.modify) : ''}</td>
-                <td class="p-2">${!isDirectory ? `<button class="download-btn bg-green-500 text-white px-2 py-1 rounded text-sm" data-remote-path="${remoteFilePath}">Download</button>` : ''}</td>
+                <td class="p-2 ${isDirectory ? 'cursor-pointer file-item directory' : 'file-item file'}">${name}</td>
+                <td class="p-2 text-gray-400">${facts.size ? formatBytes(facts.size) : ''}</td>
+                <td class="p-2 text-gray-400">${facts.modify ? formatDate(facts.modify) : ''}</td>
+                <td class="p-2 text-center">${!isDirectory ? `<button class="action-btn download-btn text-indigo-400" data-remote-path="${remoteFilePath}"><i class="fas fa-download"></i></button>` : ''}</td>
             `;
 
             if (isDirectory) {
@@ -169,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             addDownloadToList(remotePath);
         } catch (error) {
-            alert(`Error starting download: ${error.message}`);
+            showError(`Error starting download: ${error.message}`);
         }
     }
 
@@ -177,18 +183,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const filename = remotePath.split('/').pop();
         const downloadItem = document.createElement('div');
         downloadItem.id = `download-${remotePath}`;
-        downloadItem.className = 'p-2 border-b';
+        downloadItem.className = 'download-item p-2 rounded';
         downloadItem.innerHTML = `
-            <span>${filename}</span>
-            <progress id="progress-${remotePath}" value="0" max="100" class="w-full"></progress>
-            <button class="pause-btn bg-yellow-500 text-white px-2 py-1 rounded text-sm" data-remote-path="${remotePath}">Pause</button>
-            <button class="cancel-btn bg-red-500 text-white px-2 py-1 rounded text-sm" data-remote-path="${remotePath}">Cancel</button>
+            <div class="flex items-center justify-between">
+                <span class="truncate text-sm">${filename}</span>
+                <span class="status text-sm text-gray-400">Em progresso...</span>
+            </div>
+            <progress id="progress-${remotePath}" value="0" max="100" class="w-full mt-1"></progress>
+            <div class="actions text-right mt-1">
+                <button class="action-btn pause-btn" data-remote-path="${remotePath}"><i class="fas fa-pause"></i></button>
+                <button class="action-btn cancel-btn" data-remote-path="${remotePath}"><i class="fas fa-times"></i></button>
+            </div>
         `;
         downloadsList.appendChild(downloadItem);
 
         downloadItem.querySelector('.pause-btn').addEventListener('click', function() {
             socket.emit('pause_download', { remote_path: remotePath });
-            this.textContent = this.textContent === 'Pause' ? 'Resume' : 'Pause';
+            const icon = this.querySelector('i');
+            icon.classList.toggle('fa-pause');
+            icon.classList.toggle('fa-play');
         });
 
         downloadItem.querySelector('.cancel-btn').addEventListener('click', () => {
@@ -200,34 +213,52 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateConnectionUI() {
         const protocolRadios = document.querySelectorAll('input[name="protocol"]');
         if (isConnected) {
-            connectBtn.textContent = 'Desconectar';
-            connectBtn.classList.replace('bg-blue-500', 'bg-red-500');
-            connectBtn.classList.replace('hover:bg-blue-600', 'hover:bg-red-600');
-            fileListContainer.classList.remove('hidden');
-            serverInput.disabled = true;
-            portInput.disabled = true;
-            userInput.disabled = true;
-            passwordInput.disabled = true;
+            connectBtn.innerHTML = '<i class="fas fa-times mr-2"></i>Desconectar';
+            connectBtn.classList.replace('bg-indigo-600', 'bg-red-600');
+            connectBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-red-700');
+            mainContent.classList.remove('hidden');
+            [serverInput, portInput, userInput, passwordInput].forEach(el => el.disabled = true);
             protocolRadios.forEach(radio => radio.disabled = true);
         } else {
-            connectBtn.textContent = 'Conectar';
-            connectBtn.classList.replace('bg-red-500', 'bg-blue-500');
-            connectBtn.classList.replace('hover:bg-red-600', 'hover:bg-blue-600');
-            fileListContainer.classList.add('hidden');
-            serverInput.disabled = false;
-            portInput.disabled = false;
-            userInput.disabled = false;
-            passwordInput.disabled = false;
+            connectBtn.innerHTML = '<i class="fas fa-plug mr-2"></i>Conectar';
+            connectBtn.classList.replace('bg-red-600', 'bg-indigo-600');
+            connectBtn.classList.replace('hover:bg-red-700', 'hover:bg-indigo-700');
+            mainContent.classList.add('hidden');
+            [serverInput, portInput, userInput, passwordInput].forEach(el => el.disabled = false);
             protocolRadios.forEach(radio => radio.disabled = false);
         }
     }
 
+    function setLoading(button, isLoading, text) {
+        button.disabled = isLoading;
+        button.innerHTML = isLoading ? `<i class="fas fa-spinner fa-spin mr-2"></i>${text}` : text;
+    }
+
+    function showError(message) {
+        // This could be improved with a toast notification library
+        console.error(message);
+        alert(message);
+    }
+
+    function formatBytes(bytes, decimals = 2) {
+        if (bytes == 0) return '0 Bytes';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
     function formatDate(dateString) {
-        const year = dateString.substring(0, 4);
-        const month = dateString.substring(4, 6);
-        const day = dateString.substring(6, 8);
-        const hour = dateString.substring(8, 10);
-        const minute = dateString.substring(10, 12);
-        return `${day}/${month}/${year} ${hour}:${minute}`;
+        try {
+            const year = dateString.substring(0, 4);
+            const month = dateString.substring(4, 6);
+            const day = dateString.substring(6, 8);
+            const hour = dateString.substring(8, 10);
+            const minute = dateString.substring(10, 12);
+            return `${day}/${month}/${year} ${hour}:${minute}`;
+        } catch (e) {
+            return 'N/A';
+        }
     }
 });

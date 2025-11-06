@@ -1,53 +1,104 @@
-
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
-
-body {
-    transition: background-color 0.3s;
+:root {
+    --primary-color: #4f46e5; /* Indigo-600 */
+    --background-color: #111827; /* Gray-900 */
+    --card-background: #1f2937; /* Gray-800 */
+    --text-color: #d1d5db; /* Gray-300 */
+    --text-secondary-color: #9ca3af; /* Gray-400 */
+    --border-color: #374151; /* Gray-700 */
 }
 
-#connection-form input:focus, #connection-form button:focus {
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-family: 'Inter', sans-serif;
+}
+
+header {
+    background-color: var(--card-background);
+}
+
+input[type="text"], input[type="password"], input[type="number"], input[type="date"] {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: var(--text-color);
+}
+
+input:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); /* Blue-400 focus ring */
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.5);
+}
+
+.form-radio {
+    background-color: #374151;
+    border-color: #4b5563;
+}
+
+.form-radio:checked {
+    background-color: var(--primary-color);
+}
+
+#file-list tr {
+    transition: background-color 0.2s ease-in-out;
 }
 
 #file-list tr:hover {
-    background-color: #f3f4f6; /* Gray-100 on hover */
+    background-color: #374151;
 }
 
-.file-item.directory {
+#file-list .file-item.directory {
+    color: #a5b4fc; /* Indigo-300 */
     font-weight: 500;
-    color: #1e40af; /* Blue-800 */
+}
+
+.file-item::before {
+    font-family: "Font Awesome 6 Free";
+    margin-right: 10px;
+    width: 20px;
+    display: inline-block;
+    text-align: center;
 }
 
 .file-item.directory::before {
-    content: '\\f07b'; /* Font Awesome folder icon */
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    margin-right: 8px;
-    color: #fbbf24; /* Amber-400 */
+    content: '\\f07b'; /* folder */
+    color: #f59e0b; /* Amber-500 */
 }
 
 .file-item.file::before {
-    content: '\\f15b'; /* Font Awesome file icon */
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 400;
-    margin-right: 8px;
-    color: #9ca3af; /* Gray-400 */
+    content: '\\f15b'; /* file */
+    color: var(--text-secondary-color);
+}
+
+.download-item {
+    background-color: #374151;
+    border-left: 4px solid var(--primary-color);
 }
 
 progress {
     -webkit-appearance: none;
     appearance: none;
-    height: 8px;
-    border-radius: 4px;
+    height: 6px;
+    border-radius: 3px;
     overflow: hidden;
+    border: none;
 }
 
 progress::-webkit-progress-bar {
-    background-color: #e5e7eb; /* Gray-200 */
+    background-color: #4b5563;
 }
 
 progress::-webkit-progress-value {
-    background-color: #3b82f6; /* Blue-500 */
-    transition: width 0.1s;
+    background-color: var(--primary-color);
+    transition: width 0.2s;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary-color);
+    transition: color 0.2s;
+}
+.action-btn:hover {
+    color: var(--text-color);
 }
