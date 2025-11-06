@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const connectBtn = document.getElementById('connect-btn');
     const serverInput = document.getElementById('server');
+    const portInput = document.getElementById('port');
     const userInput = document.getElementById('user');
     const passwordInput = document.getElementById('password');
     const fileListContainer = document.getElementById('file-list-container');
@@ -51,14 +52,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function connect() {
         const server = serverInput.value;
+        const port = portInput.value || '8080';
         const user = userInput.value;
         const password = passwordInput.value;
+        const protocol = document.querySelector('input[name="protocol"]:checked').value;
 
         try {
             const response = await fetch('http://localhost:5001/api/connect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ server, user, password }),
+                body: JSON.stringify({ server, port, user, password, protocol }),
             });
 
             if (!response.ok) {
@@ -195,22 +198,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateConnectionUI() {
+        const protocolRadios = document.querySelectorAll('input[name="protocol"]');
         if (isConnected) {
             connectBtn.textContent = 'Desconectar';
             connectBtn.classList.replace('bg-blue-500', 'bg-red-500');
             connectBtn.classList.replace('hover:bg-blue-600', 'hover:bg-red-600');
             fileListContainer.classList.remove('hidden');
             serverInput.disabled = true;
+            portInput.disabled = true;
             userInput.disabled = true;
             passwordInput.disabled = true;
+            protocolRadios.forEach(radio => radio.disabled = true);
         } else {
             connectBtn.textContent = 'Conectar';
             connectBtn.classList.replace('bg-red-500', 'bg-blue-500');
             connectBtn.classList.replace('hover:bg-red-600', 'hover:bg-blue-600');
             fileListContainer.classList.add('hidden');
             serverInput.disabled = false;
+            portInput.disabled = false;
             userInput.disabled = false;
             passwordInput.disabled = false;
+            protocolRadios.forEach(radio => radio.disabled = false);
         }
     }
 
